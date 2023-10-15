@@ -12,10 +12,7 @@ DEFAULT_IMAGE_URL = (
 )
 
 def get_image_url(request, image):
-    if image:
-        return request.build_absolute_uri(image.url)
-    else:
-        return DEFAULT_IMAGE_URL
+    return request.build_absolute_uri(image.url) if image else DEFAULT_IMAGE_URL
 
 
 def add_pokemon(folium_map, lat, lon, image_url=DEFAULT_IMAGE_URL):
@@ -32,16 +29,10 @@ def show_all_pokemons(request):
     )
     for pokemon_entity in pokemon_entities:
         image_url = get_image_url(request, pokemon_entity.pokemon.image)
-        add_pokemon(
-            folium_map,
-            pokemon_entity.latitude,
-            pokemon_entity.longitude,
-            image_url,
-        )
+        add_pokemon(folium_map, pokemon_entity.latitude, pokemon_entity.longitude, image_url)
 
-    pokemons = Pokemon.objects.all()
     pokemons_on_page = []
-    for pokemon in pokemons:
+    for pokemon in Pokemon.objects.all():
         image_url = get_image_url(request, pokemon.image)
         pokemons_on_page.append({
             'pokemon_id': pokemon.id,
@@ -66,12 +57,8 @@ def show_pokemon(request, pokemon_id):
         disappeared_at__gte=time_now,
     )
     for pokemon_entity in pokemon_entities:
-        add_pokemon(
-            folium_map,
-            pokemon_entity.latitude,
-            pokemon_entity.longitude,
-            image_url
-        )
+        add_pokemon(folium_map, pokemon_entity.latitude, pokemon_entity.longitude, image_url)
+
     previous_evolution = {}
     previous_pokemon = pokemon.previous_evolution
     if previous_pokemon:
@@ -80,15 +67,9 @@ def show_pokemon(request, pokemon_id):
             "pokemon_id": previous_pokemon.id,
             "img_url": get_image_url(request, previous_pokemon.image)
         }
-    next_pokemon = pokemon.next_evolutions.all().first()
-    if next_pokemon:
-        next_evolution = {
-            "title_ru": next_pokemon.title,
-            "pokemon_id": next_pokemon.id,
-            "img_url": get_image_url(request, next_pokemon.image)
-        }
-    else:
-        next_evolution = {}
+
+    next_pokemon = pokemon.next_evolutions.first() or {}
+
     return render(request, 'pokemon.html', context={
         'map': folium_map._repr_html_(),
         'pokemon': {
@@ -99,7 +80,6 @@ def show_pokemon(request, pokemon_id):
             'title_jp': pokemon.title_jp,
             'description': pokemon.description,
             'previous_evolution': previous_evolution,
-            'next_evolution': next_evolution,
+            'next_evolution': next_pokemon,
         }
     })
-
